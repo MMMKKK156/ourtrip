@@ -3,982 +3,935 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>大阪旅遊</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <title>旅のしおり (旅遊手帳)</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Leaflet CSS & JS (地圖功能) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- 字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-color: #FDFBF7;
+            --primary: #6A8372;
+            --primary-light: #E6EBE7;
+            --accent: #DFA89B;
+            --text-main: #464646;
+            --text-light: #8A8A8A;
+            --card-bg: #FFFFFF;
+            --border: #E8E6E1;
+            --shadow: 0 4px 20px rgba(106, 131, 114, 0.08);
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; overflow-x: hidden; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", sans-serif; background: #f5f4f0; }
-        .app { max-width: 500px; margin: 0 auto; background: #fafaf7; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.06); }
+        body { 
+            font-family: 'Zen Maru Gothic', -apple-system, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main);
+            letter-spacing: 0.03em;
+        }
+
+        .app { max-width: 500px; margin: 0 auto; min-height: 100vh; position: relative; background: var(--bg-color); }
         
-        /* 抹茶色系 Header */
-        .header { 
-            background: linear-gradient(135deg, #a8b89f 0%, #8fa888 50%, #7a9175 100%); 
-            color: #fff; 
-            padding: 28px 20px; 
-            position: relative; 
+        .header {
+            background-color: var(--bg-color);
+            padding: 30px 24px 20px;
+            text-align: center;
+        }
+        
+        .trip-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .header h1 { font-size: 28px; margin-bottom: 8px; font-weight: 700; color: var(--text-main); }
+        .header p { font-size: 14px; color: var(--text-light); font-weight: 500; }
+        
+        .weather-info {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        }
+        .weather-temp { font-size: 24px; font-weight: 700; color: var(--primary); }
+        .weather-desc { font-size: 13px; color: var(--text-light); }
+
+        .tabs { 
+            display: flex; justify-content: center; padding: 0 5px; margin-bottom: 20px;
+            background: rgba(253, 251, 247, 0.95);
+            position: sticky; top: 0; z-index: 99;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .tab { 
+            flex: 1; padding: 16px 2px; border: none; background: none; 
+            font-size: 14px; cursor: pointer; color: #999; 
+            transition: all 0.3s; font-weight: 500; position: relative; white-space: nowrap;
+        }
+        .tab.active { color: var(--primary); font-weight: 700; }
+        .tab.active::after {
+            content: ''; position: absolute; bottom: 6px; left: 50%;
+            transform: translateX(-50%); width: 6px; height: 6px;
+            background: var(--accent); border-radius: 50%;
+        }
+        
+        .content { padding: 0 20px 120px 20px; }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            position: relative;
             overflow: hidden;
         }
-        .header::before { 
-            content: ''; 
-            position: absolute; 
-            top: -30%; 
-            right: -15%; 
-            width: 250px; 
-            height: 250px; 
-            background: radial-gradient(circle, rgba(255,255,255,0.18), transparent); 
-            border-radius: 50%; 
-        }
-        .header::after {
-            content: '';
-            position: absolute;
-            bottom: -20%;
-            left: -10%;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(255,255,255,0.12), transparent);
-            border-radius: 50%;
-        }
-        .header h1 { 
-            font-size: 26px; 
-            margin-bottom: 8px; 
-            font-weight: 500; 
-            letter-spacing: 2px; 
-            position: relative; 
-            z-index: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .header p { 
-            font-size: 13px; 
-            opacity: 0.9; 
-            letter-spacing: 1px; 
-            position: relative; 
-            z-index: 1;
-            font-weight: 300;
-        }
         
-        .tabs { display: flex; background: #fafaf7; border-bottom: 1px solid #e3e5dd; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .tab { flex: 1; padding: 16px 8px; border: none; background: none; font-size: 13px; cursor: pointer; color: #9a9c8e; transition: all 0.2s; font-weight: 500; }
-        .tab.active { color: #6b7a62; border-bottom: 2px solid #8fa888; }
-        
-        .content { padding: 18px 18px 120px 18px; min-height: calc(100vh - 200px); }
-        .flight-info { 
-            background: linear-gradient(135deg, #9aa69a, #8a958a); 
-            color: white; 
-            border-radius: 16px; 
-            padding: 18px; 
-            margin-bottom: 16px; 
-            box-shadow: 0 4px 12px rgba(154,166,154,0.25);
+        /* 登機證樣式 */
+        .flight-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
             position: relative;
+            box-shadow: var(--shadow);
         }
-        .flight-actions {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            display: flex;
-            gap: 8px;
-        }
-        .flight-btn {
-            width: 28px;
-            height: 28px;
-            border: 1.5px solid rgba(255,255,255,0.6);
-            background: transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .flight-btn:hover {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.9);
-        }
-        .flight-btn svg {
-            width: 14px;
-            height: 14px;
-            stroke: white;
-        }
-        .day-slider { display: flex; overflow-x: auto; gap: 10px; margin-bottom: 20px; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
-        .day-slider::-webkit-scrollbar { display: none; }
-        .day-btn { min-width: 68px; height: 68px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1.5px solid #e3e5dd; background: #fafaf7; cursor: pointer; flex-shrink: 0; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .day-btn.active { background: linear-gradient(135deg, #8fa888, #7a9175); color: white; border-color: #8fa888; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(143,168,136,0.3); }
-        .day-btn:active { transform: scale(0.95); }
-        
-        .card { background: #fafaf7; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #e3e5dd; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .item-card { background: #fafaf7; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #e3e5dd; position: relative; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .item-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
-        .item-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 16px 0 0 16px; }
-        .item-card.景點::before { background: linear-gradient(180deg, #7b9aaf, #6a8a9f); }
-        .item-card.美食::before { background: linear-gradient(180deg, #c4a57b, #b39466); }
-        .item-card.購物::before { background: linear-gradient(180deg, #c5938f, #b5827e); }
-        .item-card.交通::before { background: linear-gradient(180deg, #9aa69a, #8a958a); }
-        
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 14px; font-size: 15px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
-        .btn-primary { background: linear-gradient(135deg, #8fa888, #7a9175); color: white; box-shadow: 0 4px 12px rgba(143,168,136,0.25); }
-        .btn-secondary { background: linear-gradient(135deg, #9aa69a, #8a958a); color: white; box-shadow: 0 4px 12px rgba(154,166,154,0.25); margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-primary:active, .btn-secondary:active { transform: translateY(1px); }
-        
-        .btn-add-small {
-            background: linear-gradient(135deg, #8fa888, #7a9175);
+        .flight-header {
+            background: var(--primary);
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
+            padding: 10px 15px;
             font-size: 13px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            flex-shrink: 0;
+            font-weight: 700;
+            display: flex; justify-content: space-between;
         }
-        .btn-add-small:active {
-            transform: scale(0.95);
+        .flight-body { padding: 15px; }
+        .flight-route { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
+        .flight-code { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .flight-label { font-size: 11px; color: #999; margin-bottom: 2px; }
+        .flight-val { font-size: 14px; font-weight: 500; }
+        .flight-plane { color: var(--accent); font-size: 20px; transform: rotate(90deg); }
+
+        .day-slider { display: flex; overflow-x: auto; gap: 12px; margin-bottom: 24px; padding: 4px; -webkit-overflow-scrolling: touch; }
+        .day-slider::-webkit-scrollbar { display: none; }
+        .day-btn { 
+            min-width: 64px; height: 80px; border-radius: 30px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            background: white; border: 1px solid var(--border); color: var(--text-light);
+            cursor: pointer; flex-shrink: 0; transition: all 0.3s; 
+        }
+        .day-btn.active { 
+            background: var(--primary); color: white; border-color: var(--primary); 
+            transform: translateY(-4px); box-shadow: 0 8px 16px rgba(106, 131, 114, 0.25);
         }
         
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-        .modal-content { background: #fafaf7; border-radius: 20px 20px 0 0; padding: 26px; width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); -webkit-overflow-scrolling: touch; }
+        .item-card {
+            background: white; border-radius: var(--radius); padding: 0;
+            margin-bottom: 16px; border: 1px solid var(--border); box-shadow: var(--shadow);
+            overflow: hidden; display: flex; transition: transform 0.2s;
+        }
+        .item-card:active { transform: scale(0.99); }
         
-        .input { width: 100%; padding: 13px; border: 1.5px solid #e3e5dd; border-radius: 12px; margin-top: 6px; font-size: 15px; transition: all 0.2s; background: #fff; }
-        .input:focus { outline: none; border-color: #8fa888; background: white; box-shadow: 0 0 0 3px rgba(143,168,136,0.1); }
+        .item-time-col {
+            padding: 18px 12px; background: var(--primary-light);
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 70px; border-right: 1px dashed var(--border);
+        }
+        .item-time { font-size: 14px; font-weight: 700; color: var(--primary); }
+        
+        .item-main { padding: 16px; flex: 1; }
+        .item-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+        .item-loc { font-size: 12px; color: var(--text-light); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .item-loc:hover { color: var(--primary); }
+        
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; margin-top: 8px; display: inline-block; }
+        .tag.景點 { background: #E3F2FD; color: #5C88AA; }
+        .tag.美食 { background: #FCE4EC; color: #AA5C76; }
+        .tag.購物 { background: #FFF8E1; color: #AA8D5C; }
+        .tag.交通 { background: #F1F8E9; color: #6D8E58; }
+
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(106, 131, 114, 0.3); }
+        .btn-add-small { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; }
+        .btn-link { font-size: 12px; color: var(--primary); background: #eee; padding: 4px 10px; border-radius: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; margin-right: 6px; }
+
+        .translate-btn {
+            background: white; border: 1px solid var(--border); border-radius: 20px; padding: 20px;
+            display: flex; align-items: center; justify-content: space-between; text-decoration: none;
+            color: var(--text-main); box-shadow: var(--shadow); margin-bottom: 12px;
+        }
+        .translate-btn strong { display: block; font-size: 18px; margin-bottom: 4px; color: var(--primary); }
+        .translate-btn span { font-size: 13px; color: #999; }
+        .translate-icon { font-size: 32px; opacity: 0.8; }
+        
+        .app-btn { background: linear-gradient(135deg, #4285F4, #34A853); color: white; border: none; }
+        .app-btn strong { color: white; }
+        .app-btn span { color: rgba(255,255,255,0.8); }
+
+        .data-btn { background: white; border: 1px solid var(--border); padding: 12px; border-radius: 12px; color: var(--text-light); font-size: 14px; cursor: pointer; text-align: center; flex: 1; }
+        .member-tag { background: #eee; padding: 4px 12px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+        #embedded-map { width: 100%; height: 100%; border-radius: var(--radius); z-index: 1; }
+        .map-container { height: 60vh; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 4px solid white; position: relative; }
+        .map-loading { position: absolute; inset: 0; background: #f0f0f0; display: flex; align-items: center; justify-content: center; z-index: 2; color: #999; font-size: 14px; }
+
+        .input { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; margin-top: 6px; font-size: 15px; background: #fdfdfd; font-family: inherit; }
+        .input:focus { outline: none; border-color: var(--primary); background: white; }
+        .modal { background: rgba(70, 70, 70, 0.4); backdrop-filter: blur(2px); }
+        .modal-content { border-radius: 24px 24px 0 0; background: #FDFBF7; }
         
         .flex { display: flex; gap: 10px; }
         .flex-1 { flex: 1; }
-        .mb-15 { margin-bottom: 15px; }
-        .mb-20 { margin-bottom: 20px; }
         .text-center { text-align: center; }
-        .text-gray { color: #9a9c8e; }
-        .font-bold { font-weight: 600; }
-        .label { font-size: 13px; font-weight: 600; color: #6b7a62; margin-bottom: 6px; display: block; }
-        
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .section-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #6b7a62;
-        }
-        
-        .category-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .category-btn { padding: 11px; border: 1.5px solid #e3e5dd; background: white; border-radius: 12px; cursor: pointer; text-align: center; font-size: 13px; transition: all 0.2s; font-weight: 500; }
-        .category-btn.景點 { border-color: #7b9aaf; background: linear-gradient(135deg, #dce7ed, #cdd9e0); color: #4a6070; }
-        .category-btn.美食 { border-color: #c4a57b; background: linear-gradient(135deg, #f2eadb, #e8dfc8); color: #7a6545; }
-        .category-btn.購物 { border-color: #c5938f; background: linear-gradient(135deg, #f0e2e0, #e5d5d3); color: #7d5855; }
-        .category-btn.交通 { border-color: #9aa69a; background: linear-gradient(135deg, #e5e8e5, #d8dcd8); color: #5a635a; }
-        
-        .icon-btn { width: 34px; height: 34px; border: none; background: #f0f2ed; color: #9a9c8e; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
-        .icon-btn:active { transform: scale(0.92); }
-        .icon-btn.edit { background: linear-gradient(135deg, #dce7ed, #cdd9e0); color: #4a6070; }
-        .icon-btn.delete { background: linear-gradient(135deg, #f0e2e0, #e5d5d3); color: #7d5855; }
-        .icon-btn svg { width: 17px; height: 17px; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .stat-card { background: linear-gradient(135deg, #fafaf7, #f5f4f0); border-radius: 14px; padding: 18px; text-align: center; border: 1px solid #e3e5dd; }
-        
-        .member-list { display: flex; flex-direction: column; gap: 10px; }
-        .member-item { background: linear-gradient(135deg, #fafaf7, #f5f4f0); border: 1.5px solid #e3e5dd; border-radius: 14px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 500; }
-        .member-item .name { flex: 1; color: #5a635a; }
-        .member-item .actions { display: flex; gap: 8px; }
-        .member-item .edit-input { flex: 1; padding: 8px 12px; border: 1.5px solid #8fa888; border-radius: 10px; font-size: 15px; }
-        
-        .map-day-card { background: #fafaf7; border-radius: 16px; padding: 18px; margin-bottom: 16px; border: 1px solid #e3e5dd; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .location-badge { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 14px; font-size: 12px; margin-right: 6px; margin-bottom: 6px; font-weight: 600; }
-        .location-badge.景點 { background: linear-gradient(135deg, #dce7ed, #cdd9e0); color: #4a6070; }
-        .location-badge.美食 { background: linear-gradient(135deg, #f2eadb, #e8dfc8); color: #7a6545; }
-        .location-badge.購物 { background: linear-gradient(135deg, #f0e2e0, #e5d5d3); color: #7d5855; }
-        .location-badge.交通 { background: linear-gradient(135deg, #e5e8e5, #d8dcd8); color: #5a635a; }
-        
-        .expense-card { background: #fafaf7; border-radius: 16px; padding: 18px; margin-bottom: 14px; border: 1px solid #e3e5dd; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.03); position: relative; padding-left: 24px; }
-        .expense-card::before { content: ''; position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; border-radius: 50%; }
-        .expense-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
-        
-        .settlement-section { margin-top: 24px; }
-        .settlement-card { background: #fafaf7; border-radius: 16px; padding: 18px; margin-bottom: 16px; border: 1px solid #e3e5dd; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .settlement-title { font-size: 15px; font-weight: 600; color: #6b7a62; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #e3e5dd; }
-        .settlement-item { background: linear-gradient(135deg, #fafaf7, #f5f4f0); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e3e5dd; }
-        
-        .translate-container { display: flex; flex-direction: column; gap: 16px; }
-        .translate-btn { background: white; border: 2px solid #e3e5dd; border-radius: 18px; padding: 24px; cursor: pointer; transition: all 0.3s; text-decoration: none; color: inherit; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .translate-btn:active { transform: scale(0.98); }
-        .translate-btn.camera { background: linear-gradient(135deg, #c5938f, #b5827e); color: white; border: none; }
-        .translate-btn.ch-ja { background: linear-gradient(135deg, #8fa888, #7a9175); color: white; border: none; }
-        .translate-btn.ja-ch { background: linear-gradient(135deg, #7b9aaf, #6a8a9f); color: white; border: none; }
+        .mb-15 { margin-bottom: 15px; }
+        .icon-btn { width: 32px; height: 32px; border: none; background: transparent; color: #aaa; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .settle-arrow { color: var(--accent); font-weight: bold; margin: 0 8px; }
     </style>
 </head>
 <body>
     <div id="app" class="app">
+        <!-- Header -->
         <div class="header">
-            <h1>OSAKA TRAVEL</h1>
-            <p>2025.01.06 - 01.10</p>
-        </div>
-
-        <div class="tabs">
-            <button class="tab" v-bind:class="{active: tab==='plan'}" v-on:click="tab='plan'">行程</button>
-            <button class="tab" v-bind:class="{active: tab==='map'}" v-on:click="tab='map'">地圖</button>
-            <button class="tab" v-bind:class="{active: tab==='money'}" v-on:click="tab='money'">分帳</button>
-            <button class="tab" v-bind:class="{active: tab==='translate'}" v-on:click="tab='translate'">翻譯</button>
-        </div>
-
-        <div v-if="!dataLoaded" style="padding: 60px 20px; text-align: center; color: #9a9c8e;">
-            <div style="font-size: 40px; margin-bottom: 16px;">⏳</div>
-            <div>載入中...</div>
-        </div>
-
-        <div class="content" v-if="dataLoaded && days.length > 0 && di < days.length">
-            <!-- 行程 -->
-            <div v-if="tab==='plan'">
-                <div class="day-slider">
-                    <div v-for="(d,i) in days" v-bind:key="i" class="day-btn" v-bind:class="{active: di===i}" v-on:click="di=i">
-                        <div style="font-size: 10px; opacity: 0.7; font-weight: 600;">{{ d.s }}</div>
-                        <div style="font-size: 17px; font-weight: 700; margin-top: 2px;">D{{ i+1 }}</div>
-                    </div>
-                    <button class="day-btn" v-on:click="addDay" style="border-style: dashed; color: #9a9c8e;">
-                        <div style="font-size: 22px; font-weight: 300;">+</div>
-                    </button>
-                </div>
-
-                <!-- 航班資訊移到上面 -->
-                <div v-if="days[di].flight" class="flight-info">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
-                        </svg>
-                        <span style="font-size: 14px; font-weight: 600;">{{ days[di].flight.airline }} {{ days[di].flight.flightNo }}</span>
-                    </div>
-                    <div style="font-size: 13px; opacity: 0.9; line-height: 1.6; padding-bottom: 36px;">
-                        <div>{{ days[di].flight.departure }} → {{ days[di].flight.arrival }}</div>
-                        <div>起飛 {{ days[di].flight.departureTime }} / 抵達 {{ days[di].flight.arrivalTime }}</div>
-                    </div>
-                    <div class="flight-actions">
-                        <button class="flight-btn" v-on:click="editFlight">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="flight-btn" v-on:click="deleteFlight">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
+            <div class="trip-badge" v-if="tripTitle">{{ tripTitle }}</div>
+            <div v-if="!editingHeader" v-on:click="startEditHeader" style="cursor: pointer;">
+                <h1>{{ tripTitle || '東京之旅' }}</h1>
+                <p>📅 {{ tripDates || '點擊設定日期' }}</p>
+                <div v-if="weather.loaded" class="weather-info">
+                    <div v-html="weather.icon" style="color: var(--accent);"></div>
+                    <div style="text-align: left;">
+                        <div class="weather-temp">{{ weather.temp }}°C</div>
+                        <div class="weather-desc">{{ weather.description }}</div>
                     </div>
                 </div>
-
-                <!-- 當日總覽移到下面 -->
-                <div class="card" style="background: linear-gradient(135deg, #f5f4f0, #eeede8); border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
-                    <input v-model="days[di].t" v-on:input="saveData" class="input" style="font-size: 17px; font-weight: 600; background: transparent; border: none; border-bottom: 2px solid #c8cbbe; border-radius: 0; padding: 10px 0;" placeholder="當日主題">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
-                        <div style="font-size: 13px; color: #9a9c8e; font-weight: 500;">{{ days[di].d }}</div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 26px;">☀️</span>
-                            <span style="font-size: 19px; font-weight: 600; color: #6b7a62;">12°C</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="days[di].items.length===0" class="text-center text-gray" style="padding: 70px 0;">
-                    <div style="font-size: 52px; margin-bottom: 14px; opacity: 0.25;">📍</div>
-                    <div style="font-size: 15px;">尚無行程</div>
-                </div>
-
-                <div v-for="(item,i) in days[di].items" v-bind:key="i" class="item-card" v-bind:class="item.category">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                        <div style="flex: 1;">
-                            <div style="font-size: 12px; color: #9a9c8e; margin-bottom: 5px; font-weight: 600;">{{ item.time }}</div>
-                            <div class="font-bold" style="font-size: 17px; color: #5a635a; margin-bottom: 7px;">{{ item.name }}</div>
-                            <div v-if="item.location" style="font-size: 13px; color: #9a9c8e; display: flex; align-items: center; gap: 5px;">
-                                <span style="opacity: 0.5;">📍</span>
-                                <span>{{ item.location }}</span>
-                            </div>
-                        </div>
-                        <div class="flex" style="gap: 7px;">
-                            <button v-on:click="editItem(i)" class="icon-btn edit">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button v-on:click="delItem(i)" class="icon-btn delete">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div v-if="item.note" style="font-size: 13px; color: #9a9c8e; line-height: 1.7; padding-top: 10px; border-top: 1px solid #e3e5dd; white-space: pre-wrap;">{{ item.note }}</div>
-                </div>
-
-                <button class="btn btn-primary" v-on:click="showAdd=true">+ 新增行程</button>
-                <button class="btn btn-secondary" v-on:click="showFlightAdd=true">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path>
-                    </svg>
-                    新增航班資訊
-                </button>
             </div>
 
-            <!-- 地圖（移到分帳前面） -->
-            <div v-if="tab==='map'">
-                <div v-if="days.filter(d=>d.items&&d.items.filter(item=>item.location).length>0).length===0" class="text-center text-gray" style="padding: 90px 0;">
-                    <div style="font-size: 60px; margin-bottom: 18px; opacity: 0.25;">🗺️</div>
-                    <div style="font-size: 15px;">請先在行程中新增地點</div>
+            <!-- Header 編輯模式 -->
+            <div v-if="editingHeader" style="background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 10px; position: relative; z-index: 100;">
+                <select v-model="tripTitle" class="input" style="margin-bottom: 10px;" @change="autoSetCurrency">
+                    <option value="">選擇城市</option>
+                    <option value="東京">🇯🇵 東京 (JPY)</option>
+                    <option value="大阪">🇯🇵 大阪 (JPY)</option>
+                    <option value="京都">🇯🇵 京都 (JPY)</option>
+                    <option value="首爾">🇰🇷 首爾 (KRW)</option>
+                    <option value="曼谷">🇹🇭 曼谷 (THB)</option>
+                    <option value="台北">🇹🇼 台北 (TWD)</option>
+                    <option value="倫敦">🇬🇧 倫敦 (EUR)</option>
+                    <option value="巴黎">🇫🇷 巴黎 (EUR)</option>
+                    <option value="紐約">🇺🇸 紐約 (USD)</option>
+                </select>
+                <div class="flex">
+                    <div class="flex-1">
+                        <div style="font-size: 12px; color: #999; margin-bottom: 4px;">開始</div>
+                        <input v-model="startDate" type="date" class="input">
+                    </div>
+                    <div class="flex-1">
+                        <div style="font-size: 12px; color: #999; margin-bottom: 4px;">結束</div>
+                        <input v-model="endDate" type="date" class="input">
+                    </div>
+                </div>
+                <div class="flex" style="margin-top: 15px;">
+                    <button v-on:click="cancelHeaderEdit" class="btn" style="background: #eee; color: #666;">取消</button>
+                    <button v-on:click="saveHeaderEdit" class="btn btn-primary">確定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab" :class="{active: tab==='plan'}" @click="tab='plan'">行程</button>
+            <button class="tab" :class="{active: tab==='map'}" @click="switchTab('map')">地圖</button>
+            <button class="tab" :class="{active: tab==='money'}" @click="tab='money'">分帳</button>
+            <button class="tab" :class="{active: tab==='todo'}" @click="tab='todo'">清單</button>
+            <button class="tab" :class="{active: tab==='translate'}" @click="tab='translate'">翻譯</button>
+        </div>
+
+        <!-- 內容區 -->
+        <div class="content">
+            <!-- 1. 行程 Tab -->
+            <div v-if="tab==='plan'">
+                
+                <!-- 航班按鈕/卡片區 -->
+                <div style="margin-bottom: 20px;">
+                    <button v-if="!showFlightCard" @click="showFlightCard=true" class="btn" style="background: white; border: 1px dashed var(--primary); color: var(--primary); padding: 10px;">
+                        + 設定航班資訊
+                    </button>
+                    
+                    <div v-if="showFlightCard" class="flight-card">
+                        <div class="flight-header">
+                            <span>✈️ FLIGHT TICKET</span>
+                            <span @click="showFlightEdit=true" style="cursor: pointer;">✏️ 編輯</span>
+                        </div>
+                        <div class="flight-body">
+                            <!-- 去程 -->
+                            <div class="flight-route">
+                                <div>
+                                    <div class="flight-code">{{ flights.in.from || 'TPE' }}</div>
+                                    <div class="flight-val">{{ flights.in.time || '00:00' }}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="flight-label">{{ flights.in.date || 'Date' }}</div>
+                                    <div class="flight-plane">✈</div>
+                                    <div class="flight-label">{{ flights.in.no || 'Flight No.' }}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="flight-code">{{ flights.in.to || 'DST' }}</div>
+                                    <div class="flight-val">{{ flights.in.terminal ? 'T'+flights.in.terminal : '-' }}</div>
+                                </div>
+                            </div>
+                            <div style="height: 1px; background: #eee; margin: 10px 0;"></div>
+                            <!-- 回程 -->
+                            <div class="flight-route" style="margin-bottom: 0;">
+                                <div>
+                                    <div class="flight-code">{{ flights.out.from || 'DST' }}</div>
+                                    <div class="flight-val">{{ flights.out.time || '00:00' }}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="flight-label">{{ flights.out.date || 'Date' }}</div>
+                                    <div class="flight-plane" style="transform: rotate(-90deg);">✈</div>
+                                    <div class="flight-label">{{ flights.out.no || 'Flight No.' }}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="flight-code">{{ flights.out.to || 'TPE' }}</div>
+                                    <div class="flight-val">{{ flights.out.terminal ? 'T'+flights.out.terminal : '-' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div v-for="(d,i) in days" v-bind:key="i">
-                    <div v-if="d.items&&d.items.filter(item=>item.location).length>0" class="map-day-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-                            <div>
-                                <div style="font-size: 12px; color: #9a9c8e; font-weight: 600;">{{ d.s }}</div>
-                                <div class="font-bold" style="font-size: 17px; color: #5a635a; margin-top: 2px;">Day {{ i+1 }} · {{ d.t }}</div>
-                            </div>
-                            <div style="font-size: 12px; color: #9a9c8e; font-weight: 600;">{{ d.items.filter(item=>item.location).length }} 個地點</div>
-                        </div>
+                <div class="day-slider" v-if="days.length > 0">
+                    <div v-for="(d,i) in days" :key="i" class="day-btn" :class="{active: di===i}" @click="di=i">
+                        <span style="font-size: 12px; opacity: 0.8;">{{ d.weekday }}</span>
+                        <span style="font-size: 18px; font-weight: 700;">{{ getDayNumber(d.d) }}</span>
+                    </div>
+                    <div class="day-btn" @click="addDay" style="opacity: 0.5;">
+                        <span style="font-size: 20px;">+</span>
+                    </div>
+                </div>
 
-                        <div style="margin-top: 14px;">
-                            <div v-for="(item,j) in d.items.filter(item=>item.location)" v-bind:key="j" style="margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #e3e5dd;">
-                                <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 5px;">
-                                    <span class="location-badge" v-bind:class="item.category">{{ item.category }}</span>
-                                    <span style="font-size: 14px; font-weight: 600; color: #5a635a;">{{ item.name }}</span>
+                <div v-if="days[di]" class="card" style="padding: 15px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--accent);">
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-light);">Day {{ di+1 }} · {{ days[di].d }}</div>
+                        <input v-model="days[di].t" @change="saveData" class="input" style="border:none; padding: 0; font-size: 18px; font-weight: 700; margin: 5px 0 0 0; background: transparent; width: auto;" placeholder="輸入當日主題...">
+                    </div>
+                    <button @click="deleteDay(di)" class="icon-btn" style="color: #E57373;">✖</button>
+                </div>
+
+                <div v-if="!days[di] || days[di].items.length===0" class="text-center" style="padding: 60px 0; color: #ccc;">
+                    <div style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">✏️</div>
+                    <p>今天還沒有安排行程</p>
+                </div>
+
+                <div v-if="days[di]">
+                    <div v-for="(item, i) in days[di].items" :key="i" class="item-card">
+                        <div class="item-time-col">
+                            <span class="item-time">{{ item.time }}</span>
+                            <div style="width: 1px; flex: 1; background: #ccc; margin-top: 8px; border-right: 1px dashed #ccc;"></div>
+                        </div>
+                        <div class="item-main">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <div class="item-title">{{ item.name }}</div>
+                                    <!-- 導航功能 -->
+                                    <div v-if="item.location" class="item-loc" @click="openGoogleMap(item.location)">
+                                        <span style="color: var(--accent);">📍</span>
+                                        {{ item.location }} 
+                                        <span style="font-size: 10px; color: var(--primary); margin-left: 4px;">(導航)</span>
+                                    </div>
+                                    <div class="tag" :class="item.category">{{ item.category }}</div>
                                 </div>
-                                <a v-bind:href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(item.location + ' 大阪')" target="_blank" rel="noopener noreferrer" style="font-size: 13px; color: #9a9c8e; padding-left: 9px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 500; text-decoration: none;">
-                                    <span style="opacity: 0.5;">📍</span>
-                                    <span style="text-decoration: underline;">{{ item.location }}</span>
+                                <div class="flex" style="gap: 2px;">
+                                    <button @click="editItem(i)" class="icon-btn">✎</button>
+                                    <button @click="delItem(i)" class="icon-btn">✖</button>
+                                </div>
+                            </div>
+                            <!-- 備註與連結 -->
+                            <div v-if="item.note" style="margin-top: 8px; font-size: 13px; color: #666; background: #F9F9F9; padding: 8px; border-radius: 8px; white-space: pre-wrap;">{{ item.note }}</div>
+                            <div v-if="item.links && item.links.length > 0" style="margin-top: 6px;">
+                                <a v-for="(link, lIdx) in item.links" :key="lIdx" :href="link.url" target="_blank" class="btn-link">
+                                    🔗 {{ link.name }}
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
+                <button class="btn btn-primary" @click="showAdd=true">+ 新增行程</button>
             </div>
 
-            <!-- 分帳 -->
+            <!-- 2. 地圖 Tab -->
+            <div v-show="tab==='map'" style="height: 100%;">
+                <div class="map-container">
+                    <div id="embedded-map"></div>
+                    <div v-if="mapLoading" class="map-loading">
+                        <div>🗺️ 地圖載入中...</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h3 style="font-size: 16px; margin-bottom: 10px; font-weight: 700; color: var(--primary);">📍 地點列表</h3>
+                    <div style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+                        <div v-for="(loc, idx) in allLocations" :key="idx" 
+                             @click="flyToLocation(loc)"
+                             style="background: white; padding: 12px; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 14px;">{{ loc.name }}</div>
+                                <div style="font-size: 12px; color: #999;">{{ loc.day }}</div>
+                            </div>
+                            <div v-if="loc.lat" style="color: var(--primary); font-size: 12px;">已定位</div>
+                            <div v-else style="color: var(--accent); font-size: 12px;">搜尋中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 分帳 Tab (多幣別升級版) -->
             <div v-if="tab==='money'">
-                <div class="card" style="background: linear-gradient(135deg, #8fa888, #7a9175); color: white; border: none; box-shadow: 0 4px 16px rgba(143,168,136,0.25);">
-                    <div style="font-size: 14px; margin-bottom: 14px; opacity: 0.9; font-weight: 600;">匯率換算</div>
-                    <div class="flex mb-15">
-                        <input v-model.number="cvAmt" type="number" class="input flex-1" placeholder="金額" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">
-                        <select v-model="cvFrom" class="input" style="width: 78px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">
-                            <option value="JPY" style="color: black;">JPY</option>
-                            <option value="TWD" style="color: black;">TWD</option>
-                        </select>
+                <div class="card" style="border-left: 4px solid var(--primary);">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">👥 成員設定</h3>
+                    <div class="flex" style="flex-wrap: wrap; margin-bottom: 15px;">
+                        <div v-for="(m, idx) in members" :key="m" class="member-tag">
+                            {{ m }} <span v-if="members.length > 1" @click="removeMember(idx)" style="cursor: pointer; color: #999; margin-left: 4px;">×</span>
+                        </div>
                     </div>
-                    <div v-if="cvAmt>0" style="font-size: 24px; font-weight: 600; text-align: center;">= {{ cvRes }} {{ cvTo }}</div>
+                    <div class="flex">
+                        <input v-model="newMemberName" class="input" style="margin:0;" placeholder="輸入名字..." @keyup.enter="addMember">
+                        <button @click="addMember" class="btn-add-small" style="width: auto;">新增</button>
+                    </div>
                 </div>
 
-                <!-- 支出記錄 -->
-                <div class="mb-20">
-                    <div class="section-header">
-                        <div class="section-title">支出記錄</div>
-                        <button class="btn-add-small" v-on:click="showExpAdd=true">+ 新增</button>
-                    </div>
+                <!-- 結算建議 (多幣別) -->
+                <div v-if="exps.length > 0" class="card" style="background: #FFF8F0; border-color: #F8E8D0;">
+                    <h3 style="font-size: 16px; margin-bottom: 15px; color: #8B6B4E;">🧮 結算建議 (依幣別)</h3>
+                    <div v-if="Object.keys(multiCurrencySettlement).length === 0" style="color: #999; font-size: 14px;">目前帳目平衡。</div>
                     
-                    <div v-if="exps.length===0" class="text-center text-gray" style="padding: 70px 0;">
-                        <div style="font-size: 52px; margin-bottom: 14px; opacity: 0.25;">💳</div>
-                        <div style="font-size: 15px;">尚無支出記錄</div>
-                    </div>
-
-                    <div v-for="(e,i) in exps" v-bind:key="i" class="expense-card" v-bind:style="{borderLeft: '4px solid ' + getMemberColor(e.by)}">
-                        <div class="flex" style="justify-content: space-between; margin-bottom: 11px;">
-                            <div class="font-bold" style="font-size: 16px; color: #5a635a;">{{ e.desc }}</div>
-                            <div style="font-size: 19px; font-weight: 700; color: #6b7a62;">{{ e.cur==='TWD'?'NT$':'¥' }}{{ e.amt }}</div>
+                    <div v-for="(plans, cur) in multiCurrencySettlement" :key="cur" style="margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #8B6B4E; font-weight: bold; margin-bottom: 5px; background: rgba(139, 107, 78, 0.1); display: inline-block; padding: 2px 8px; border-radius: 4px;">
+                            {{ cur }} 結算
                         </div>
-                        <div style="font-size: 13px; color: #9a9c8e; margin-bottom: 10px; font-weight: 500;">{{ e.by }} 支付 · {{ e.split.join(', ') }}</div>
-                        <div v-if="e.note" style="font-size: 13px; color: #9a9c8e; line-height: 1.6; padding: 10px; background: rgba(227,229,221,0.3); border-radius: 8px; margin-bottom: 10px; white-space: pre-wrap;">{{ e.note }}</div>
-                        <div class="flex" style="justify-content: flex-end; align-items: center;">
-                            <div class="flex" style="gap: 7px;">
-                                <button v-on:click="editExp(i)" class="icon-btn edit">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                </button>
-                                <button v-on:click="delE(i)" class="icon-btn delete">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                </button>
+                        <div v-for="(s, idx) in plans" :key="idx" style="padding: 5px 0; display: flex; align-items: center; justify-content: space-between; font-size: 14px;">
+                            <div>
+                                {{ s.from }} <span class="settle-arrow">⮕</span> {{ s.to }}
                             </div>
+                            <div style="font-weight: 700;">{{ s.amount }} <span style="font-size:10px;">{{ cur }}</span></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 總支出統計 -->
-                <div class="card" style="background: linear-gradient(135deg, #fafaf7, #f5f4f0); border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.04);">
-                    <div class="font-bold mb-15" style="font-size: 15px; color: #6b7a62;">總支出統計</div>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div style="font-size: 30px; font-weight: 700; color: #6b7a62; margin-bottom: 5px;">{{ exps.length }}</div>
-                            <div style="font-size: 12px; color: #9a9c8e; font-weight: 600;">筆數</div>
-                        </div>
-                        <div class="stat-card">
-                            <div style="font-size: 30px; font-weight: 700; color: #6b7a62; margin-bottom: 5px;">{{ totTWD }}</div>
-                            <div style="font-size: 12px; color: #9a9c8e; font-weight: 600;">TWD</div>
-                        </div>
-                    </div>
-                    <div class="text-center" style="margin-top: 14px; font-size: 13px; color: #9a9c8e; font-weight: 500;">日幣約 ¥{{ totJPY }}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="font-size: 16px; font-weight: 700;">支出紀錄</h3>
+                    <button class="btn-add-small" @click="openExpenseForm">+ 記帳</button>
                 </div>
 
-                <div v-if="settlesJPY.length>0 || settlesTWD.length>0" class="settlement-section">
-                    <div v-if="settlesJPY.length>0" class="settlement-card">
-                        <div class="settlement-title">🇯🇵 日圓結算</div>
-                        <div v-for="(s,i) in settlesJPY" v-bind:key="i" class="settlement-item">
-                            <div style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: #5a635a;">
-                                <span>{{ s.from }}</span>
-                                <span style="color: #7a9175; font-weight: 700;">→</span>
-                                <span>{{ s.to }}</span>
-                            </div>
-                            <div style="font-size: 17px; font-weight: 700; color: #7a9175;">¥{{ s.amt }}</div>
-                        </div>
-                    </div>
+                <div v-if="exps.length===0" class="text-center" style="padding: 40px 0; color: #ccc;">無支出紀錄</div>
 
-                    <div v-if="settlesTWD.length>0" class="settlement-card">
-                        <div class="settlement-title">🇹🇼 台幣結算</div>
-                        <div v-for="(s,i) in settlesTWD" v-bind:key="i" class="settlement-item">
-                            <div style="display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; color: #5a635a;">
-                                <span>{{ s.from }}</span>
-                                <span style="color: #7a9175; font-weight: 700;">→</span>
-                                <span>{{ s.to }}</span>
-                            </div>
-                            <div style="font-size: 17px; font-weight: 700; color: #7a9175;">NT$ {{ s.amt }}</div>
-                        </div>
+                <div v-for="(e, i) in exps" :key="i" class="card" style="padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 15px; font-weight: 700;">{{ e.desc }}</div>
+                        <div style="font-size: 12px; color: #999;">{{ e.by }} 先付 · 分給 {{ e.split.join(', ') }}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 16px; font-weight: 700; color: var(--primary);">{{ e.amt }}</div>
+                        <div style="font-size: 11px; color: #aaa;">{{ e.cur }}</div>
+                    </div>
+                    <button @click="delExp(i)" class="icon-btn" style="margin-left: 10px; color: #e57373;">×</button>
+                </div>
+            </div>
+            
+            <!-- 4. 清單 Tab -->
+            <div v-if="tab==='todo'">
+                 <div class="card">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">📝 待辦事項</h3>
+                    <div class="flex" style="margin-bottom: 15px;">
+                        <input v-model="newTodo" @keyup.enter="addTodo" class="input" style="margin:0;" placeholder="新增待辦...">
+                        <button @click="addTodo" class="btn-add-small">新增</button>
+                    </div>
+                    <div v-for="(t, i) in todos" :key="i" style="padding: 10px 0; border-bottom: 1px dashed #eee; display: flex; align-items: center;">
+                        <input type="checkbox" v-model="t.done" @change="saveData" style="margin-right: 10px; width: 18px; height: 18px; accent-color: var(--primary);">
+                        <span :style="{textDecoration: t.done?'line-through':'none', color: t.done?'#ccc':'#444', flex:1}">{{ t.text }}</span>
+                        <button @click="todos.splice(i,1);saveData()" class="icon-btn" style="width:24px; height:24px;">×</button>
                     </div>
                 </div>
 
-                <!-- 成員管理移至最下方 -->
-                <div class="mb-20" style="margin-top: 30px;">
-                    <div class="font-bold mb-15" style="font-size: 15px; color: #6b7a62;">成員管理</div>
-                    <div class="member-list">
-                        <div v-for="(m,i) in members" v-bind:key="i" class="member-item">
-                            <input v-if="editingMember===i" v-model="editMemberName" class="edit-input" v-on:keyup.enter="saveMemberEdit(i)" placeholder="成員名稱">
-                            <span v-else class="name">{{ m }}</span>
-                            <div class="actions">
-                                <button v-if="editingMember===i" v-on:click="saveMemberEdit(i)" style="background: #7a9175; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;">儲存</button>
-                                <button v-if="editingMember===i" v-on:click="cancelMemberEdit" style="background: #9a9c8e; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;">取消</button>
-                                <button v-if="editingMember!==i" v-on:click="startEditMember(i,m)" style="background: #7b9aaf; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;">編輯</button>
-                                <button v-if="editingMember!==i" v-on:click="delM(i)" style="background: #c5938f; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;">刪除</button>
-                            </div>
-                        </div>
+                <div class="card" style="border-left: 4px solid var(--accent);">
+                    <h3 style="font-size: 16px; margin-bottom: 15px;">🧳 行李打包清單</h3>
+                    <div class="flex" style="margin-bottom: 15px;">
+                        <input v-model="newPackingItem" @keyup.enter="addPackingItem" class="input" style="margin:0;" placeholder="例: 護照、轉接頭...">
+                        <button @click="addPackingItem" class="btn-add-small" style="background: var(--accent);">新增</button>
                     </div>
-                    <div class="flex" style="margin-top: 14px;">
-                        <input v-model="newM" v-on:keyup.enter="addM" class="input flex-1" placeholder="新增成員">
-                        <button class="btn btn-primary" style="width: auto; padding: 13px 22px;" v-on:click="addM">新增</button>
+                    <div v-for="(t, i) in packingList" :key="i" style="padding: 10px 0; border-bottom: 1px dashed #eee; display: flex; align-items: center;">
+                        <input type="checkbox" v-model="t.done" @change="saveData" style="margin-right: 10px; width: 18px; height: 18px; accent-color: var(--accent);">
+                        <span :style="{textDecoration: t.done?'line-through':'none', color: t.done?'#ccc':'#444', flex:1}">{{ t.text }}</span>
+                        <button @click="packingList.splice(i,1);saveData()" class="icon-btn" style="width:24px; height:24px;">×</button>
                     </div>
+                </div>
+
+                <div class="card" style="margin-top: 30px; border-color: #eee;">
+                    <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--text-light);">💾 資料備份</h3>
+                    <div class="flex">
+                        <button @click="doExport" class="data-btn" style="background: #fcfcfc;">📤 匯出</button>
+                        <button @click="triggerImport" class="data-btn" style="background: #fcfcfc;">📥 匯入</button>
+                         <button @click="clearAllData" class="data-btn" style="color: #E57373; border-color: #ffdcdc; background: #fff5f5;">🗑️ 清空</button>
+                    </div>
+                    <input type="file" id="importFile" accept=".json" style="display: none;" @change="importData">
                 </div>
             </div>
 
-            <!-- 翻譯 -->
+            <!-- 5. 翻譯 Tab -->
             <div v-if="tab==='translate'">
-                <h2 style="font-size: 24px; font-weight: 600; color: #6b7a62; text-align: center; margin-bottom: 10px;">Google 翻譯捷徑</h2>
-                <p style="font-size: 14px; color: #9a9c8e; text-align: center; margin-bottom: 30px;">請選擇您需要的翻譯模式</p>
-
-                <div class="translate-container">
-                    <a href="https://translate.google.com/?sl=ja&tl=zh-TW&op=images" target="_blank" rel="noopener noreferrer" class="translate-btn camera">
-                        <div>
-                            <div style="font-size: 13px; opacity: 0.9; margin-bottom: 6px;">菜單 / 看板</div>
-                            <div style="font-size: 22px; font-weight: 600;">照相翻譯 📷</div>
-                        </div>
-                        <div style="font-size: 48px; opacity: 0.2;">📸</div>
-                    </a>
-
-                    <a href="https://translate.google.com/?sl=zh-TW&tl=ja&op=translate" target="_blank" rel="noopener noreferrer" class="translate-btn ch-ja">
-                        <div>
-                            <div style="font-size: 13px; opacity: 0.9; margin-bottom: 6px;">我說中文（轉日文）</div>
-                            <div style="font-size: 22px; font-weight: 600;">CH → JA ↗</div>
-                        </div>
-                    </a>
-
-                    <a href="https://translate.google.com/?sl=ja&tl=zh-TW&op=translate" target="_blank" rel="noopener noreferrer" class="translate-btn ja-ch">
-                        <div>
-                            <div style="font-size: 13px; opacity: 0.9; margin-bottom: 6px;">對方說日文（轉中文）</div>
-                            <div style="font-size: 22px; font-weight: 600;">JA → CH ↗</div>
-                        </div>
-                    </a>
+                <div class="text-center" style="margin-bottom: 20px;">
+                    <h2 style="font-size: 20px; color: var(--primary); margin-bottom: 5px;">Google 翻譯捷徑</h2>
+                    <p style="font-size: 13px; color: #999;">目標語言：{{ getTargetLangName() }}</p>
                 </div>
+                <div style="margin-bottom: 20px;">
+                     <div style="font-size: 12px; color: var(--primary); font-weight: bold; margin-bottom: 8px; margin-left: 5px;">⚡ 極速模式 (直接開啟 App)</div>
+                     <button @click="openNativeApp('translate')" class="translate-btn app-btn">
+                        <div><span>使用手機內建 App</span><strong>開啟 Google 翻譯</strong></div>
+                        <div class="translate-icon">🚀</div>
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: #999; font-weight: bold; margin-bottom: 8px; margin-left: 5px;">🌐 網頁版 (免安裝)</div>
+                <a :href="'https://translate.google.com/?sl=' + getTranslateCode() + '&tl=zh-TW&op=images'" target="_blank" class="translate-btn">
+                    <div><span>瀏覽器開啟</span><strong>照相翻譯 (網頁)</strong></div>
+                    <div class="translate-icon" style="color: var(--accent);">📷</div>
+                </a>
+                <a :href="'https://translate.google.com/?sl=zh-TW&tl=' + getTranslateCode() + '&op=translate'" target="_blank" class="translate-btn">
+                    <div><span>瀏覽器開啟</span><strong>中文 ⮕ {{ getTargetLangName() }}</strong></div>
+                    <div class="translate-icon">🗣️</div>
+                </a>
             </div>
         </div>
 
-        <!-- Modals 保持不變但更新航班表單... -->
-        <div v-if="showAdd" v-on:click.self="closeAdd" class="modal">
-            <div class="modal-content" v-on:click.stop>
-                <h3 style="font-size: 21px; font-weight: 600; margin-bottom: 22px; color: #6b7a62;">{{ editIdx!==null?'編輯行程':'新增行程' }}</h3>
-                
+        <!-- 行程 Modal (新增連結/備註功能) -->
+        <div v-if="showAdd" class="modal" style="position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-end;" @click.self="showAdd=false">
+            <div class="modal-content" style="width:100%; padding: 24px; max-height: 85vh; overflow-y: auto;">
+                <h3 style="margin-bottom: 20px;">{{ editIdx!==null?'編輯行程':'新增行程' }}</h3>
                 <div class="mb-15">
-                    <label class="label">時間</label>
+                    <label style="font-size: 12px; color: #999;">時間</label>
                     <div class="flex">
-                        <select v-model="form.h" class="input flex-1">
-                            <option v-for="h in 24" v-bind:key="h" v-bind:value="pad(h-1)">{{ pad(h-1) }}</option>
-                        </select>
-                        <span style="font-size: 22px; color: #c8cbbe; display: flex; align-items: center;">:</span>
-                        <select v-model="form.m" class="input flex-1">
-                            <option value="00">00</option><option value="05">05</option><option value="10">10</option>
-                            <option value="15">15</option><option value="20">20</option><option value="25">25</option>
-                            <option value="30">30</option><option value="35">35</option><option value="40">40</option>
-                            <option value="45">45</option><option value="50">50</option><option value="55">55</option>
-                        </select>
+                        <select v-model="form.h" class="input flex-1"><option v-for="h in 24" :value="pad(h-1)">{{ pad(h-1) }}</option></select>
+                        <select v-model="form.m" class="input flex-1"><option v-for="m in ['00','15','30','45']" :value="m">{{ m }}</option></select>
                     </div>
                 </div>
-
-                <div class="mb-15">
-                    <label class="label">行程名稱</label>
-                    <input v-model="form.name" class="input" placeholder="例：大阪城天守閣">
+                <input v-model="form.name" class="input mb-15" placeholder="行程名稱 (例: 淺草寺)">
+                <input v-model="form.location" class="input mb-15" placeholder="地點 (導航用，例: Asakusa)">
+                <div class="flex mb-15">
+                    <button v-for="c in ['景點','美食','購物','交通']" :key="c" @click="form.category=c" 
+                            class="btn" :style="{padding:'8px', fontSize:'13px', background: form.category===c?'var(--primary)':'#eee', color: form.category===c?'white':'#666'}">{{ c }}</button>
                 </div>
-
-                <div class="mb-15">
-                    <label class="label">地點（選填）</label>
-                    <input v-model="form.location" class="input" placeholder="例：大阪城公園 1-1">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">類型</label>
-                    <div class="category-selector">
-                        <button v-on:click="form.category='景點'" class="category-btn" v-bind:class="{'景點': form.category==='景點'}">景點</button>
-                        <button v-on:click="form.category='美食'" class="category-btn" v-bind:class="{'美食': form.category==='美食'}">美食</button>
-                        <button v-on:click="form.category='購物'" class="category-btn" v-bind:class="{'購物': form.category==='購物'}">購物</button>
-                        <button v-on:click="form.category='交通'" class="category-btn" v-bind:class="{'交通': form.category==='交通'}">交通</button>
+                <!-- 詳細備註 -->
+                <label style="font-size: 12px; color: #999;">詳細備註</label>
+                <textarea v-model="form.note" class="input mb-15" placeholder="可輸入交通方式、餐廳訂位號碼、營業時間..." style="height: 100px;"></textarea>
+                
+                <!-- 附件連結區 -->
+                <div class="mb-15" style="background: #f8f8f8; padding: 10px; border-radius: 12px;">
+                    <label style="font-size: 12px; color: #999;">附件連結 (電子票券/PDF網址)</label>
+                    <div v-for="(l, idx) in form.links" :key="idx" class="flex" style="margin-top: 5px;">
+                        <input v-model="l.name" class="input" style="flex:1; margin:0; font-size:12px;" placeholder="名稱 (例: 門票)">
+                        <input v-model="l.url" class="input" style="flex:2; margin:0; font-size:12px;" placeholder="https://...">
+                        <button @click="form.links.splice(idx,1)" class="icon-btn" style="color: #e57373;">×</button>
                     </div>
+                    <button @click="form.links.push({name:'', url:''})" class="btn-link" style="margin-top: 8px; border:1px dashed #ccc; background:white;">+ 新增連結</button>
                 </div>
 
-                <div class="mb-20">
-                    <label class="label">備註（選填）</label>
-                    <textarea v-model="form.note" class="input" style="height: 105px; resize: vertical; line-height: 1.6;" placeholder="記錄重要資訊&#10;可以換行輸入"></textarea>
-                </div>
-
-                <div class="flex">
-                    <button class="btn flex-1" style="background: #e3e5dd; color: #6b7a62; font-weight: 600;" v-on:click="closeAdd">取消</button>
-                    <button class="btn btn-primary flex-1" v-on:click="saveAdd">儲存</button>
-                </div>
+                <button @click="saveAdd" class="btn btn-primary">儲存</button>
+            </div>
+        </div>
+        
+        <!-- 航班 Modal -->
+        <div v-if="showFlightEdit" class="modal" style="position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-end;" @click.self="showFlightEdit=false">
+            <div class="modal-content" style="width:100%; padding: 24px;">
+                <h3 style="margin-bottom: 20px;">編輯航班資訊</h3>
+                <div style="font-size: 12px; font-weight: bold; color: var(--primary); margin-bottom: 10px;">去程 (Inbound)</div>
+                <div class="flex mb-15"><input v-model="flights.in.date" class="input" placeholder="日期"><input v-model="flights.in.time" class="input" placeholder="時間"></div>
+                <div class="flex mb-15"><input v-model="flights.in.from" class="input" placeholder="出發 (TPE)"><input v-model="flights.in.to" class="input" placeholder="抵達 (NRT)"></div>
+                <div class="flex mb-15"><input v-model="flights.in.no" class="input" placeholder="班次 (JX800)"><input v-model="flights.in.terminal" class="input" placeholder="航廈"></div>
+                
+                <div style="height:1px; background:#eee; margin: 20px 0;"></div>
+                
+                <div style="font-size: 12px; font-weight: bold; color: var(--primary); margin-bottom: 10px;">回程 (Outbound)</div>
+                <div class="flex mb-15"><input v-model="flights.out.date" class="input" placeholder="日期"><input v-model="flights.out.time" class="input" placeholder="時間"></div>
+                <div class="flex mb-15"><input v-model="flights.out.from" class="input" placeholder="出發"><input v-model="flights.out.to" class="input" placeholder="抵達"></div>
+                <div class="flex mb-15"><input v-model="flights.out.no" class="input" placeholder="班次"><input v-model="flights.out.terminal" class="input" placeholder="航廈"></div>
+                
+                <button @click="saveFlight" class="btn btn-primary">儲存</button>
             </div>
         </div>
 
-        <div v-if="showFlightAdd" v-on:click.self="closeFlightAdd" class="modal">
-            <div class="modal-content" v-on:click.stop>
-                <h3 style="font-size: 21px; font-weight: 600; margin-bottom: 22px; color: #6b7a62;">{{ editingFlight?'編輯航班資訊':'新增航班資訊' }}</h3>
-                
-                <div class="mb-15">
-                    <label class="label">航空公司</label>
-                    <input v-model="flightForm.airline" class="input" placeholder="例：長榮航空">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">航班編號</label>
-                    <input v-model="flightForm.flightNo" class="input" placeholder="例：BR178">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">出發地</label>
-                    <input v-model="flightForm.departure" class="input" placeholder="例：桃園機場 TPE">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">目的地</label>
-                    <input v-model="flightForm.arrival" class="input" placeholder="例：關西機場 KIX">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">起飛時間</label>
-                    <input v-model="flightForm.departureTime" class="input" placeholder="例：10:55">
-                </div>
-
-                <div class="mb-20">
-                    <label class="label">抵達時間</label>
-                    <input v-model="flightForm.arrivalTime" class="input" placeholder="例：14:55">
-                </div>
-
-                <div class="flex">
-                    <button class="btn flex-1" style="background: #e3e5dd; color: #6b7a62; font-weight: 600;" v-on:click="closeFlightAdd">取消</button>
-                    <button class="btn btn-primary flex-1" v-on:click="saveFlightAdd">儲存</button>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showExpAdd" v-on:click.self="closeExpAdd" class="modal">
-            <div class="modal-content" v-on:click.stop>
-                <h3 style="font-size: 21px; font-weight: 600; margin-bottom: 22px; color: #6b7a62;">{{ editExpIdx!==null?'編輯支出':'新增支出' }}</h3>
-                
-                <div class="mb-15">
-                    <label class="label">項目</label>
-                    <input v-model="expForm.desc" class="input" placeholder="例：午餐">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">幣別</label>
-                    <div class="flex">
-                        <button v-on:click="expForm.cur='TWD'" class="btn flex-1" v-bind:style="{background: expForm.cur==='TWD'?'linear-gradient(135deg, #8fa888, #7a9175)':'#e3e5dd', color: expForm.cur==='TWD'?'white':'#6b7a62'}">台幣 TWD</button>
-                        <button v-on:click="expForm.cur='JPY'" class="btn flex-1" v-bind:style="{background: expForm.cur==='JPY'?'linear-gradient(135deg, #8fa888, #7a9175)':'#e3e5dd', color: expForm.cur==='JPY'?'white':'#6b7a62'}">日圓 JPY</button>
-                    </div>
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">金額</label>
-                    <input v-model.number="expForm.amt" type="number" class="input" placeholder="輸入金額">
-                </div>
-
-                <div class="mb-15">
-                    <label class="label">由誰支付</label>
-                    <select v-model="expForm.by" class="input">
-                        <option value="">請選擇</option>
-                        <option v-for="m in members" v-bind:key="m" v-bind:value="m">{{ m }}</option>
+        <!-- 支出 Modal -->
+        <div v-if="showExpAdd" class="modal" style="position:fixed; inset:0; z-index:1000; display:flex; align-items:flex-end;" @click.self="showExpAdd=false">
+            <div class="modal-content" style="width:100%; padding: 24px;">
+                <h3 style="margin-bottom: 20px;">新增支出</h3>
+                <input v-model="expForm.desc" class="input mb-15" placeholder="項目 (例: 拉麵)">
+                <div class="flex mb-15">
+                    <input v-model.number="expForm.amt" type="number" class="input" placeholder="金額">
+                    <select v-model="expForm.cur" class="input" style="margin-top:6px;">
+                        <option :value="targetCurrency">{{ targetCurrency }}</option>
+                        <option value="TWD">TWD</option>
+                        <option value="USD">USD</option>
                     </select>
                 </div>
-
                 <div class="mb-15">
-                    <label class="label">分給誰</label>
-                    <div style="background: #fff; border-radius: 12px; padding: 14px; max-height: 160px; overflow-y: auto; border: 1px solid #e3e5dd;">
-                        <label v-for="m in members" v-bind:key="m" style="display: flex; align-items: center; gap: 11px; padding: 9px; cursor: pointer;">
-                            <input type="checkbox" v-bind:value="m" v-model="expForm.split" style="width: 19px; height: 19px; cursor: pointer;">
-                            <span style="font-size: 14px; font-weight: 500;">{{ m }}</span>
-                        </label>
+                    <div style="font-size:12px; color:#999; margin-bottom:5px;">誰付的</div>
+                    <div class="flex" style="flex-wrap:wrap; gap:8px;">
+                        <button v-for="m in members" :key="m" @click="expForm.by=m" class="btn" style="width:auto;" :style="{padding:'8px 12px', background: expForm.by===m?'var(--primary)':'#eee', color: expForm.by===m?'white':'#666'}">{{ m }}</button>
                     </div>
                 </div>
-
-                <div class="mb-20">
-                    <label class="label">備註（選填）</label>
-                    <textarea v-model="expForm.note" class="input" style="height: 80px; resize: vertical; line-height: 1.6;" placeholder="記錄細節資訊"></textarea>
+                 <div class="mb-15">
+                    <div style="font-size:12px; color:#999; margin-bottom:5px;">分給誰</div>
+                    <div class="flex" style="flex-wrap: wrap;">
+                         <label v-for="m in members" :key="'s'+m" style="padding: 8px 12px; background: #f5f5f5; border-radius: 20px; font-size: 13px; display:flex; align-items:center; gap:6px;">
+                             <input type="checkbox" :value="m" v-model="expForm.split"> {{ m }}
+                         </label>
+                    </div>
                 </div>
-
-                <div class="flex">
-                    <button class="btn flex-1" style="background: #e3e5dd; color: #6b7a62; font-weight: 600;" v-on:click="closeExpAdd">取消</button>
-                    <button class="btn btn-primary flex-1" v-on:click="saveExpAdd">儲存</button>
-                </div>
+                <button @click="saveExp" class="btn btn-primary">儲存</button>
             </div>
         </div>
     </div>
 
     <script>
-        const memberColors = ['#7b9aaf', '#c5938f', '#c4a57b', '#9aa69a', '#7a9175', '#9a958a', '#8a7a75', '#b5827e'];
-        
-        const app = Vue.createApp({
-            data() {
-                return {
-                    dataLoaded: false,
-                    tab: 'plan',
-                    di: 0,
-                    showAdd: false,
-                    showExpAdd: false,
-                    showFlightAdd: false,
-                    editIdx: null,
-                    editExpIdx: null,
-                    editingMember: null,
-                    editMemberName: '',
-                    editingFlight: false,
-                    form: {h:'09',m:'00',name:'',location:'',category:'景點',note:''},
-                    expForm: {desc:'',amt:0,cur:'JPY',by:'',split:[],note:''},
-                    flightForm: {airline:'',flightNo:'',departure:'',arrival:'',departureTime:'',arrivalTime:''},
-                    days: [],
-                    members: [],
-                    newM: '',
-                    exps: [],
-                    rate: 0.21,
-                    cvAmt: 0,
-                    cvFrom: 'JPY'
+        const { createApp, ref, computed, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const tab = ref('plan');
+                const di = ref(0);
+                const tripTitle = ref('');
+                const tripDates = ref('');
+                const startDate = ref('');
+                const endDate = ref('');
+                const targetCurrency = ref('JPY');
+                const days = ref([]);
+                const members = ref(['我', '旅伴']);
+                const exps = ref([]);
+                const todos = ref([]);
+                const packingList = ref([]);
+                
+                // 航班資訊
+                const showFlightCard = ref(false);
+                const showFlightEdit = ref(false);
+                const flights = ref({
+                    in: { date:'', time:'', from:'', to:'', no:'', terminal:'' },
+                    out: { date:'', time:'', from:'', to:'', no:'', terminal:'' }
+                });
+
+                const editingHeader = ref(false);
+                const showAdd = ref(false);
+                const showExpAdd = ref(false);
+                const editIdx = ref(null);
+                const newMemberName = ref('');
+                
+                const form = ref({ h:'09', m:'00', name:'', location:'', category:'景點', note:'', links:[] });
+                const expForm = ref({ desc:'', amt:'', cur:'JPY', by:'', split:[] });
+                
+                const weather = ref({ loaded: false, temp: 0, description: '', icon: '' });
+                const map = ref(null);
+                const mapLoading = ref(true);
+                const markers = ref({});
+                const locationCache = ref({});
+
+                const pad = (n) => String(n).padStart(2, '0');
+                const getDayNumber = (dStr) => dStr ? (dStr.split('/').length > 2 ? dStr.split('/')[2] : dStr) : '';
+
+                // 導航功能
+                const openGoogleMap = (loc) => {
+                    const q = `${tripTitle.value} ${loc}`;
+                    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank');
                 };
-            },
-            computed: {
-                totTWD() {
-                    var sum = 0;
-                    for (var i=0; i<this.exps.length; i++) {
-                        sum += this.exps[i].cur==='TWD' ? this.exps[i].amt : this.exps[i].amt*this.rate;
+
+                // 多幣別結算邏輯
+                const multiCurrencySettlement = computed(() => {
+                    if (exps.value.length === 0) return {};
+                    
+                    // 1. 整理出所有出現過的幣別
+                    const currencies = [...new Set(exps.value.map(e => e.cur))];
+                    const results = {};
+
+                    currencies.forEach(cur => {
+                        let balances = {};
+                        members.value.forEach(m => balances[m] = 0);
+
+                        // 2. 只計算該幣別的帳
+                        const curExps = exps.value.filter(e => e.cur === cur);
+                        if (curExps.length === 0) return;
+
+                        curExps.forEach(e => {
+                            if (!e.split || e.split.length === 0) return;
+                            // 付款人 +
+                            if (balances[e.by] !== undefined) balances[e.by] += e.amt;
+                            // 分攤人 -
+                            let splitAmt = e.amt / e.split.length;
+                            e.split.forEach(person => {
+                                if (balances[person] !== undefined) balances[person] -= splitAmt;
+                            });
+                        });
+
+                        // 3. 結算該幣別
+                        let debtors = [];
+                        let creditors = [];
+                        for (let person in balances) {
+                            let amt = Math.round(balances[person] * 100) / 100; // 小數點處理
+                            if (amt < -0.1) debtors.push({ name: person, amt: amt }); 
+                            else if (amt > 0.1) creditors.push({ name: person, amt: amt }); 
+                        }
+
+                        debtors.sort((a, b) => a.amt - b.amt);
+                        creditors.sort((a, b) => b.amt - a.amt);
+
+                        let plan = [];
+                        let i = 0; let j = 0;
+                        while (i < debtors.length && j < creditors.length) {
+                            let debt = Math.abs(debtors[i].amt);
+                            let credit = creditors[j].amt;
+                            let settleAmt = Math.min(debt, credit);
+                            
+                            if (settleAmt > 0) {
+                                plan.push({
+                                    from: debtors[i].name,
+                                    to: creditors[j].name,
+                                    amount: Math.round(settleAmt * 10) / 10
+                                });
+                            }
+
+                            debtors[i].amt += settleAmt;
+                            creditors[j].amt -= settleAmt;
+                            if (Math.abs(debtors[i].amt) < 0.1) i++;
+                            if (creditors[j].amt < 0.1) j++;
+                        }
+                        
+                        if (plan.length > 0) results[cur] = plan;
+                    });
+
+                    return results;
+                });
+
+                const allLocations = computed(() => {
+                    let locs = [];
+                    days.value.forEach((d, dIdx) => {
+                        d.items.forEach(item => {
+                            if (item.location) {
+                                locs.push({ name: item.name, location: item.location, day: `Day ${dIdx+1}`, lat: item.lat, lon: item.lon });
+                            }
+                        });
+                    });
+                    return locs;
+                });
+
+                const initData = () => {
+                    const saved = localStorage.getItem('jp_trip_data');
+                    if (saved) {
+                        try {
+                            const data = JSON.parse(saved);
+                            tripTitle.value = data.title;
+                            tripDates.value = data.dates;
+                            days.value = data.days || [];
+                            exps.value = data.exps || [];
+                            targetCurrency.value = data.currency || 'JPY';
+                            todos.value = data.todos || [];
+                            packingList.value = data.packingList || [];
+                            if (data.members) members.value = data.members;
+                            if (data.flights) {
+                                flights.value = data.flights;
+                                showFlightCard.value = true;
+                            }
+                            locationCache.value = data.locCache || {};
+                        } catch(e) {}
+                    } else {
+                        days.value = [{ d: '2025/01/01', weekday: 'WED', t: '', items: [] }];
                     }
-                    return Math.round(sum);
-                },
-                totJPY() {
-                    var sum = 0;
-                    for (var i=0; i<this.exps.length; i++) {
-                        sum += this.exps[i].cur==='JPY' ? this.exps[i].amt : this.exps[i].amt/this.rate;
+                    if (tripTitle.value) fetchWeather(tripTitle.value);
+                };
+
+                const saveData = () => {
+                    localStorage.setItem('jp_trip_data', JSON.stringify({
+                        title: tripTitle.value, dates: tripDates.value, days: days.value, exps: exps.value,
+                        currency: targetCurrency.value, todos: todos.value, packingList: packingList.value,
+                        members: members.value, flights: flights.value, locCache: locationCache.value
+                    }));
+                };
+
+                // Header & Currency
+                const startEditHeader = () => editingHeader.value = true;
+                const cancelHeaderEdit = () => editingHeader.value = false;
+                const saveHeaderEdit = () => {
+                    if(startDate.value && endDate.value) {
+                        tripDates.value = `${startDate.value} ~ ${endDate.value}`;
+                        generateDays();
                     }
-                    return Math.round(sum);
-                },
-                cvTo() { return this.cvFrom==='JPY'?'TWD':'JPY'; },
-                cvRes() {
-                    return this.cvFrom==='JPY' ? Math.round(this.cvAmt*this.rate) : Math.round(this.cvAmt/this.rate);
-                },
-                settlesJPY() { return this.calcSettles('JPY'); },
-                settlesTWD() { return this.calcSettles('TWD'); }
-            },
-            methods: {
-                pad(n) { return String(n).padStart(2,'0'); },
-                getMemberColor(memberName) {
-                    var idx = this.members.indexOf(memberName);
-                    return memberColors[idx % memberColors.length];
-                },
-                editFlight() {
-                    if (!this.days[this.di] || !this.days[this.di].flight) return;
-                    var f = this.days[this.di].flight;
-                    this.flightForm = {
-                        airline: f.airline,
-                        flightNo: f.flightNo,
-                        departure: f.departure,
-                        arrival: f.arrival,
-                        departureTime: f.departureTime,
-                        arrivalTime: f.arrivalTime
+                    editingHeader.value = false;
+                    fetchWeather(tripTitle.value);
+                    saveData();
+                };
+                const autoSetCurrency = () => {
+                   const cityMap = { '東京': 'JPY', '大阪': 'JPY', '京都': 'JPY', '首爾': 'KRW', '曼谷': 'THB', '台北': 'TWD', '倫敦': 'EUR', '巴黎': 'EUR', '紐約': 'USD' };
+                   if(cityMap[tripTitle.value]) targetCurrency.value = cityMap[tripTitle.value];
+                };
+
+                const generateDays = () => {
+                    const s = new Date(startDate.value);
+                    const e = new Date(endDate.value);
+                    const diffDays = Math.ceil(Math.abs(e - s) / (86400000)) + 1; 
+                    if (diffDays > 30) return;
+                    const newDays = [];
+                    const weekMap = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+                    for(let i=0; i<diffDays; i++) {
+                        const d = new Date(s); d.setDate(d.getDate() + i);
+                        const dateStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+                        const oldItem = days.value[i] || {};
+                        newDays.push({ d: dateStr, weekday: weekMap[d.getDay()], t: oldItem.t || '', items: oldItem.items || [] });
+                    }
+                    days.value = newDays;
+                };
+
+                const addDay = () => { days.value.push({d: 'New Day', weekday: '-', t: '', items: []}); saveData(); };
+                const deleteDay = (idx) => { if(confirm('確定刪除？')) { days.value.splice(idx, 1); if(di.value >= days.value.length) di.value = Math.max(0, days.value.length - 1); saveData(); }};
+                
+                const editItem = (i) => {
+                    editIdx.value = i;
+                    const item = days.value[di.value].items[i];
+                    const [h, m] = item.time.split(':');
+                    // 確保 links 存在
+                    const links = item.links ? [...item.links] : [];
+                    form.value = { ...item, h, m, links };
+                    showAdd.value = true;
+                };
+                const delItem = (i) => { days.value[di.value].items.splice(i, 1); saveData(); };
+                const saveAdd = () => {
+                    const newItem = {
+                        time: `${form.value.h}:${form.value.m}`,
+                        name: form.value.name,
+                        location: form.value.location,
+                        category: form.value.category,
+                        note: form.value.note,
+                        links: form.value.links.filter(l => l.url)
                     };
-                    this.editingFlight = true;
-                    this.showFlightAdd = true;
-                },
-                deleteFlight() {
-                    if (!this.days[this.di]) return;
-                    delete this.days[this.di].flight;
-                    this.saveData();
-                },
-                startEditMember(idx, name) {
-                    this.editingMember = idx;
-                    this.editMemberName = name;
-                },
-                saveMemberEdit(idx) {
-                    if (this.editMemberName.trim()) {
-                        this.members[idx] = this.editMemberName.trim();
-                        this.editingMember = null;
-                        this.editMemberName = '';
-                        this.saveData();
-                    }
-                },
-                cancelMemberEdit() {
-                    this.editingMember = null;
-                    this.editMemberName = '';
-                },
-                saveData() {
+                    if (editIdx.value !== null) days.value[di.value].items[editIdx.value] = newItem;
+                    else { days.value[di.value].items.push(newItem); days.value[di.value].items.sort((a,b) => a.time.localeCompare(b.time)); }
+                    showAdd.value = false; editIdx.value = null;
+                    form.value = { h:'09', m:'00', name:'', location:'', category:'景點', note:'', links:[] };
+                    saveData();
+                };
+
+                const saveFlight = () => { showFlightEdit.value = false; saveData(); };
+
+                const addMember = () => { if (newMemberName.value && !members.value.includes(newMemberName.value)) { members.value.push(newMemberName.value); newMemberName.value = ''; saveData(); }};
+                const removeMember = (idx) => { if (confirm('確定刪除？')) { members.value.splice(idx, 1); saveData(); }};
+
+                const openExpenseForm = () => { expForm.value = { desc:'', amt:'', cur: targetCurrency.value, by: members.value[0], split: [...members.value] }; showExpAdd.value = true; };
+                const saveExp = () => { if(!expForm.value.desc || !expForm.value.amt) return; exps.value.push({ ...expForm.value }); showExpAdd.value = false; saveData(); };
+                const delExp = (i) => { exps.value.splice(i, 1); saveData(); };
+
+                const newTodo = ref('');
+                const addTodo = () => { if(newTodo.value) { todos.value.push({text: newTodo.value, done: false}); newTodo.value = ''; saveData(); }};
+                const newPackingItem = ref('');
+                const addPackingItem = () => { if(newPackingItem.value) { packingList.value.push({text: newPackingItem.value, done: false}); newPackingItem.value = ''; saveData(); }};
+
+                const fetchWeather = async (city) => {
+                    if (!city) return;
+                    const map = { '東京': 'Tokyo', '大阪': 'Osaka', '台北': 'Taipei', '首爾': 'Seoul' };
                     try {
-                        localStorage.setItem('osaka_days', JSON.stringify(this.days));
-                        localStorage.setItem('osaka_members', JSON.stringify(this.members));
-                        localStorage.setItem('osaka_exps', JSON.stringify(this.exps));
-                        localStorage.setItem('osaka_di', String(this.di));
-                        localStorage.setItem('osaka_tab', this.tab);
-                    } catch(e) {
-                        console.error('儲存失敗:', e);
-                    }
-                },
-                loadData() {
+                        const res = await fetch(`https://wttr.in/${map[city]||city}?format=j1`);
+                        const data = await res.json();
+                        weather.value = { loaded: true, temp: data.current_condition[0].temp_C, description: data.current_condition[0].weatherDesc[0].value, icon: '🌤️' };
+                    } catch(e) {}
+                };
+
+                const getTranslateCode = () => ({ 'JPY': 'ja', 'USD': 'en', 'EUR': 'en', 'KRW': 'ko', 'THB': 'th', 'TWD': 'en' }[targetCurrency.value] || 'en');
+                const getTargetLangName = () => ({ 'JPY': '日文', 'USD': '英文', 'EUR': '歐語', 'KRW': '韓文', 'THB': '泰文', 'TWD': '外語' }[targetCurrency.value] || '外語');
+                const openNativeApp = () => { window.location.href = 'googletranslate://'; };
+
+                const doExport = () => {
+                    const blob = new Blob([JSON.stringify({ title: tripTitle.value, dates: tripDates.value, days: days.value, exps: exps.value, currency: targetCurrency.value, todos: todos.value, packingList: packingList.value, members: members.value, flights: flights.value, locCache: locationCache.value }, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (tripTitle.value || '行程') + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                };
+                const triggerImport = () => document.getElementById('importFile').click();
+                const importData = (event) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if(confirm('匯入將覆蓋現有行程，確定嗎？')) {
+                                Object.assign(days, {value: data.days||[]});
+                                tripTitle.value = data.title; tripDates.value = data.dates; exps.value = data.exps||[]; todos.value = data.todos||[]; packingList.value = data.packingList||[]; members.value = data.members||['我']; flights.value = data.flights||flights.value; locationCache.value = data.locCache||{};
+                                saveData(); alert('匯入成功');
+                            }
+                        } catch(err) { alert('格式錯誤'); }
+                    };
+                    reader.readAsText(event.target.files[0]);
+                    event.target.value = '';
+                };
+                const clearAllData = () => { if(confirm('清空資料？')) { localStorage.removeItem('jp_trip_data'); location.reload(); }};
+
+                const initMap = () => {
+                    if (map.value) return;
+                    map.value = L.map('embedded-map').setView([35.6895, 139.6917], 11);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OSM & Carto', subdomains: 'abcd', maxZoom: 20 }).addTo(map.value);
+                    mapLoading.value = false;
+                    updateMapMarkers();
+                };
+                const geocodeLocation = async (query) => {
+                    if (locationCache.value[query]) return locationCache.value[query];
                     try {
-                        var savedDays = localStorage.getItem('osaka_days');
-                        var savedMembers = localStorage.getItem('osaka_members');
-                        var savedExps = localStorage.getItem('osaka_exps');
-                        var savedDi = localStorage.getItem('osaka_di');
-                        var savedTab = localStorage.getItem('osaka_tab');
-                        
-                        if (savedDays) {
-                            this.days = JSON.parse(savedDays);
-                        } else {
-                            this.loadDefaultDays();
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                        const data = await res.json();
+                        if (data && data.length > 0) {
+                            const result = { lat: data[0].lat, lon: data[0].lon };
+                            locationCache.value[query] = result; saveData(); return result;
                         }
-                        
-                        if (savedMembers) {
-                            this.members = JSON.parse(savedMembers);
-                        } else {
-                            this.members = ['Mia','Jodie'];
-                        }
-                        
-                        if (savedExps) {
-                            this.exps = JSON.parse(savedExps);
-                        }
-                        
-                        if (savedDi) {
-                            var idx = parseInt(savedDi);
-                            if (!isNaN(idx) && idx >= 0 && idx < this.days.length) {
-                                this.di = idx;
-                            } else {
-                                this.di = 0;
+                    } catch (e) {}
+                    return null;
+                };
+                const updateMapMarkers = async () => {
+                    if (!map.value) return;
+                    Object.values(markers.value).forEach(m => map.value.removeLayer(m));
+                    markers.value = {};
+                    const bounds = [];
+                    for (const d of days.value) {
+                        for (const item of d.items) {
+                            if (item.location) {
+                                let coords = item.lat && item.lon ? { lat: item.lat, lon: item.lon } : await geocodeLocation(`${tripTitle.value} ${item.location}`);
+                                if (coords) {
+                                    item.lat = coords.lat; item.lon = coords.lon;
+                                    const marker = L.marker([coords.lat, coords.lon]).addTo(map.value).bindPopup(`<b>${item.name}</b><br>${item.time}`);
+                                    markers.value[`${coords.lat},${coords.lon}`] = marker;
+                                    bounds.push([coords.lat, coords.lon]);
+                                }
                             }
                         }
-                        
-                        if (savedTab) {
-                            this.tab = savedTab;
-                        }
-                        
-                        this.dataLoaded = true;
-                    } catch(e) {
-                        console.error('載入失敗:', e);
-                        this.loadDefaultDays();
-                        this.members = ['Mia','Jodie'];
-                        this.di = 0;
-                        this.dataLoaded = true;
                     }
-                },
-                loadDefaultDays() {
-                    this.days = [
-                        {d:'2025/1/6',s:'1/6',t:'抵達日',items:[
-                            {time:'14:55',name:'關西機場',location:'關西國際機場',category:'交通',note:'抵達'},
-                            {time:'17:15',name:'飯店 Check-in',location:'',category:'交通',note:''},
-                            {time:'18:30',name:'日本橋電器街',location:'日本橋電器街',category:'購物',note:'玩具店、遊樂場'},
-                            {time:'20:00',name:'玉出超市',location:'玉出超市',category:'購物',note:'採購'}
-                        ]},
-                        {d:'2025/1/7',s:'1/7',t:'梅田周遊',items:[
-                            {time:'09:00',name:'天滿宮',location:'大阪天滿宮',category:'景點',note:'天神橋筋商店街'},
-                            {time:'11:30',name:'大阪生活今昔館',location:'大阪市立住まいのミュージアム',category:'景點',note:''},
-                            {time:'14:55',name:'梅田藍天大廈',location:'梅田スカイビル',category:'景點',note:'⚠️ 15:00前入場'},
-                            {time:'18:00',name:'梅田晚餐',location:'梅田',category:'美食',note:''}
-                        ]},
-                        {d:'2025/1/8',s:'1/8',t:'京都一日遊',items:[
-                            {time:'09:30',name:'清水寺',location:'清水寺',category:'景點',note:'祇園周邊'},
-                            {time:'14:30',name:'京都河原町',location:'河原町',category:'購物',note:''}
-                        ]},
-                        {d:'2025/1/9',s:'1/9',t:'難波周邊',items:[
-                            {time:'08:30',name:'木津市場',location:'黒門市場',category:'美食',note:''},
-                            {time:'15:00',name:'道頓堀',location:'道頓堀',category:'景點',note:'心齋橋'}
-                        ]},
-                        {d:'2025/1/10',s:'1/10',t:'離境日',items:[
-                            {time:'09:00',name:'飯店 Check-out',location:'',category:'交通',note:''},
-                            {time:'13:30',name:'關西機場',location:'關西國際機場',category:'交通',note:''}
-                        ]}
-                    ];
-                },
-                sortItems() {
-                    if (this.days[this.di] && this.days[this.di].items) {
-                        this.days[this.di].items.sort(function(a,b){ return a.time.localeCompare(b.time); });
-                    }
-                },
-                addDay() {
-                    if (this.days.length === 0) return;
-                    var last = this.days[this.days.length-1].s.split('/');
-                    var m = last[0], d = parseInt(last[1])+1;
-                    this.days.push({d:'2025/'+m+'/'+d, s:m+'/'+d, t:'行程規劃', items:[]});
-                    this.di = this.days.length-1;
-                    this.saveData();
-                },
-                editItem(i) {
-                    if (!this.days[this.di] || !this.days[this.di].items[i]) return;
-                    this.editIdx = i;
-                    var item = this.days[this.di].items[i];
-                    var t = item.time.split(':');
-                    this.form = {h:t[0],m:t[1],name:item.name,location:item.location||'',category:item.category,note:item.note||''};
-                    this.showAdd = true;
-                },
-                delItem(i) {
-                    if (!this.days[this.di] || !this.days[this.di].items[i]) return;
-                    this.days[this.di].items.splice(i,1);
-                    this.saveData();
-                },
-                saveAdd() {
-                    if (!this.form.name || !this.days[this.di]) { 
-                        alert('請填寫行程名稱'); 
-                        return; 
-                    }
-                    var item = {time: this.form.h+':'+this.form.m, name: this.form.name, location: this.form.location, category: this.form.category, note: this.form.note};
-                    if (this.editIdx!==null && this.days[this.di].items[this.editIdx]) {
-                        this.days[this.di].items[this.editIdx] = item;
-                    } else {
-                        this.days[this.di].items.push(item);
-                    }
-                    this.sortItems();
-                    this.closeAdd();
-                    this.saveData();
-                },
-                closeAdd() {
-                    this.showAdd=false; 
-                    this.editIdx=null;
-                    this.form={h:'09',m:'00',name:'',location:'',category:'景點',note:''};
-                },
-                saveFlightAdd() {
-                    if (!this.flightForm.airline || !this.flightForm.flightNo) {
-                        alert('請填寫航空公司和航班編號');
-                        return;
-                    }
-                    this.days[this.di].flight = {
-                        airline: this.flightForm.airline,
-                        flightNo: this.flightForm.flightNo,
-                        departure: this.flightForm.departure,
-                        arrival: this.flightForm.arrival,
-                        departureTime: this.flightForm.departureTime,
-                        arrivalTime: this.flightForm.arrivalTime
-                    };
-                    this.closeFlightAdd();
-                    this.saveData();
-                },
-                closeFlightAdd() {
-                    this.showFlightAdd = false;
-                    this.editingFlight = false;
-                    this.flightForm = {airline:'',flightNo:'',departure:'',arrival:'',departureTime:'',arrivalTime:''};
-                },
-                addM() {
-                    if (this.newM.trim() && this.members.indexOf(this.newM.trim())===-1) {
-                        this.members.push(this.newM.trim());
-                        this.newM='';
-                        this.saveData();
-                    }
-                },
-                delM(i) {
-                    this.members.splice(i,1);
-                    this.saveData();
-                },
-                editExp(i) {
-                    if (!this.exps[i]) return;
-                    this.editExpIdx = i;
-                    var e = this.exps[i];
-                    this.expForm = {desc:e.desc, amt:e.amt, cur:e.cur, by:e.by, split:[...e.split], note:e.note||''};
-                    this.showExpAdd = true;
-                },
-                saveExpAdd() {
-                    if (!this.expForm.desc || !this.expForm.amt || !this.expForm.by || this.expForm.split.length===0) {
-                        alert('請填寫完整資訊'); 
-                        return;
-                    }
-                    var newExp = {desc:this.expForm.desc, amt:this.expForm.amt, cur:this.expForm.cur, by:this.expForm.by, split:[...this.expForm.split], note:this.expForm.note||''};
-                    if (this.editExpIdx!==null && this.exps[this.editExpIdx]) {
-                        this.exps[this.editExpIdx] = newExp;
-                    } else {
-                        this.exps.push(newExp);
-                    }
-                    this.closeExpAdd();
-                    this.saveData();
-                },
-                delE(i) {
-                    if (!this.exps[i]) return;
-                    this.exps.splice(i,1);
-                    this.saveData();
-                },
-                closeExpAdd() {
-                    this.showExpAdd=false; 
-                    this.editExpIdx=null;
-                    this.expForm={desc:'',amt:0,cur:'JPY',by:'',split:[],note:''};
-                },
-                calcSettles(currency) {
-                    if (this.members.length===0) return [];
-                    var relevantExps = [];
-                    for (var i=0; i<this.exps.length; i++) {
-                        if (this.exps[i].cur === currency) {
-                            relevantExps.push(this.exps[i]);
-                        }
-                    }
-                    if (relevantExps.length===0) return [];
-                    
-                    var bal = {};
-                    for (var i=0; i<this.members.length; i++) {
-                        bal[this.members[i]] = 0;
-                    }
-                    
-                    for (var i=0; i<relevantExps.length; i++) {
-                        var e = relevantExps[i];
-                        if (!e.split || e.split.length===0) continue;
-                        var per = e.amt / e.split.length;
-                        bal[e.by] = (bal[e.by] || 0) + e.amt;
-                        for (var j=0; j<e.split.length; j++) {
-                            bal[e.split[j]] = (bal[e.split[j]] || 0) - per;
-                        }
-                    }
-                    
-                    var debt=[], cred=[];
-                    for (var p in bal) {
-                        var b = Math.round(bal[p]);
-                        if (b>0) cred.push({name:p,amt:b});
-                        else if (b<0) debt.push({name:p,amt:-b});
-                    }
-                    
-                    var res=[], i=0, j=0;
-                    while (i<debt.length && j<cred.length) {
-                        var d=debt[i].amt, c=cred[j].amt, s=Math.min(d,c);
-                        res.push({from:debt[i].name,to:cred[j].name,amt:s});
-                        debt[i].amt-=s; 
-                        cred[j].amt-=s;
-                        if (debt[i].amt===0) i++;
-                        if (cred[j].amt===0) j++;
-                    }
-                    return res;
-                }
-            },
-            mounted() {
-                var self = this;
-                setTimeout(function() {
-                    self.loadData();
-                }, 100);
-            },
-            watch: {
-                tab: function() { this.saveData(); },
-                di: function() { 
-                    if (this.di >= this.days.length) {
-                        this.di = 0;
-                    }
-                    this.saveData(); 
-                }
+                    if (bounds.length > 0) map.value.fitBounds(bounds, { padding: [50, 50] });
+                    saveData();
+                };
+                const switchTab = (t) => { tab.value = t; if (t === 'map') { nextTick(() => { initMap(); setTimeout(() => { map.value.invalidateSize(); }, 200); updateMapMarkers(); }); }};
+                const flyToLocation = (loc) => { if (loc.lat && loc.lon && map.value) { map.value.flyTo([loc.lat, loc.lon], 16); const key = `${loc.lat},${loc.lon}`; if (markers.value[key]) markers.value[key].openPopup(); } else { alert('搜尋中...'); updateMapMarkers(); }};
+
+                initData();
+
+                return {
+                    tab, di, days, tripTitle, tripDates, weather, editingHeader, startDate, endDate, startEditHeader, cancelHeaderEdit, saveHeaderEdit, autoSetCurrency,
+                    getDayNumber, addDay, deleteDay, showAdd, form, editIdx, editItem, delItem, saveAdd, openGoogleMap,
+                    targetCurrency, exps, showExpAdd, expForm, members, openExpenseForm, saveExp, delExp, multiCurrencySettlement,
+                    todos, newTodo, addTodo, packingList, newPackingItem, addPackingItem, saveData, switchTab, mapLoading, allLocations, flyToLocation, pad,
+                    getTranslateCode, getTargetLangName, doExport, triggerImport, importData, clearAllData, openNativeApp,
+                    flights, showFlightCard, showFlightEdit, saveFlight, addMember, removeMember, newMemberName
+                };
             }
-        });
-        
-        app.mount('#app');
+        }).mount('#app');
     </script>
 </body>
 </html>
